@@ -1,4 +1,4 @@
-# pyBibX
+# pyCritical
 
 ## Introduction
 
@@ -14,7 +14,7 @@ pyCritical is a Python library designed to solve Critical Path Method (CPM) and 
 
 1. Install
 ```bash
-pip install pyCritical
+pip install pycritical
 ```
 
 2. Try it in **Colab**:
