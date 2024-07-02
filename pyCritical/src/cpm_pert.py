@@ -53,7 +53,6 @@ def gantt_chart(dataset, dates, size_x = 15, size_y = 10, show_slack = True):
     ax.set_xlabel('Time')
     plt.gca().invert_yaxis()
     plt.gca().axes.get_yaxis().set_visible(False)
-    plt.title('CPM')
     ax.grid(True)
     for i in range(0, dates.shape[0]):
         idx_s = dates.iloc[i, 0]
