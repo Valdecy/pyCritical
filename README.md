@@ -2,7 +2,7 @@
 
 ## Introduction
 
-pyCritical is a Python library designed to solve Critical Path Method (CPM) and Program Evaluation Review Technique (PERT) problems. It provides functionalities to calculate project schedules, identify critical paths, and visualize project timelines with Gantt charts. This library is an essential tool for project managers, operations researchers, and anyone involved in project planning and control.
+pyCritical is a Python library designed to solve Critical Path Method (CPM) and Program Evaluation Review Technique (PERT) problems. It provides functionalities to calculate project schedules, identify critical paths, and visualize project timelines with Gantt charts. 
 
 **Features**
 
