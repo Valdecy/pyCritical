@@ -52,6 +52,6 @@ Try it in **Colab**:
 - Example 01: CPM  ([ Colab Demo ](https://colab.research.google.com/drive/1d9Hrldzh5qnSQlYUhjmsiHh6Tv6G3CF5?usp=sharing))
 - Example 02: PERT ([ Colab Demo ](https://colab.research.google.com/drive/1RQt0MSD6j7GPT6_K3_8gqaSGPgflh6U5?usp=sharing))
 - Example 03: CPM  with Dep./Lags ([ Colab Demo ](https://colab.research.google.com/drive/1Kh_E4U_KPWxrvdWsfcW9jRdxAF-lAvYR?usp=sharing))
-- Example 04: PERT with Dep./Lags([ Colab Demo ](https://colab.research.google.com/drive/1Y-uuIZcAP7b_qJddV93K5Vp8Eaeh4uhp?usp=sharing))
+- Example 04: PERT with Dep./Lags ([ Colab Demo ](https://colab.research.google.com/drive/1Y-uuIZcAP7b_qJddV93K5Vp8Eaeh4uhp?usp=sharing))
 
 ---
