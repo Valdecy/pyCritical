@@ -5,7 +5,7 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / 'README.md').read_text()
 
 setup(
-    name='pyCritical',
+    name='pycritical',
     version='1.5.7',
     license='GNU',
     author='Valdecy Pereira',
@@ -14,10 +14,10 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-		'matplotlib',
+        'matplotlib',
         'numpy',
         'pandas',
-		'scipy'
+        'scipy'
     ],
     zip_safe=True,
     description='A Python Library for CPM and PERT Methods',
