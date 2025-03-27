@@ -11,9 +11,8 @@ Whether you're planning a construction project, coordinating a research effort, 
 ## Features
 
 - **CPM Analysis**  
-  Calculate:
   - Earliest Start (ES), Earliest Finish (EF)
-  - Latest Start (LS), Latest Finish (LF)
+  - Latest Start   (LS), Latest Finish   (LF)
   - Slack time for each task
   - Full **critical path** identification
 
@@ -21,14 +20,17 @@ Whether you're planning a construction project, coordinating a research effort, 
   - Support for **three-point estimates** (Optimistic, Most Likely, Pessimistic)
   - Computes expected project duration and standard deviation
   - Probability-based assessment of project completion
+  - Earliest Start (ES), Earliest Finish (EF)
+  - Latest Start   (LS), Latest Finish   (LF)
+  - Slack time for each task
+  - Full **critical path** identification
 
 - **Support for Lags and Dependency Types**  
-  Handle the four standard dependency types:
   - `Finish-to-Start  (FS): Task B can't start  until Task A finishes.`
   - `Start-to-Start   (SS): Task B can't start  until Task A starts.`
   - `Finish-to-Finish (FF): Task B can't finish until Task A finishes.`
   - `Start-to-Finish  (SF): Task B can't finish until Task A starts.`  
-  Including **positive or negative lag times** between tasks.
+  - Including **positive or negative lag times** between tasks.
 
 - **Gantt Chart Visualization**  
   - Clear, professional Gantt charts with critical paths highlighted
