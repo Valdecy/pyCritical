@@ -288,25 +288,25 @@ def critical_path_method_dep(dataset):
         for i, (task_id, preds, duration) in enumerate(dataset):
             if task_id in visited:
                 continue
-            if all(pred[0] in ids and pred[0] in visited for pred in preds):
-                es_candidates = []
+            if all(pred[0] in visited for pred in preds):
+                es_cands = []
                 for pred_id, dep_type, lag in preds:
                     j = idd[pred_id]
                     pred_es, pred_ef = dates[j, 0], dates[j, 1]
                     if dep_type == 'FS':
-                        es_candidates.append(pred_ef + lag)
+                        es_cands.append(pred_ef + lag)
                     elif dep_type == 'SS':
-                        es_candidates.append(pred_es + lag)
+                        es_cands.append(pred_es + lag)
                     elif dep_type == 'FF':
-                        es_candidates.append(pred_ef + lag - duration)
+                        es_cands.append(pred_ef + lag - duration)
                     elif dep_type == 'SF':
-                        es_candidates.append(pred_es + lag - duration)
+                        es_cands.append(pred_es + lag - duration)
                     else:
                         raise ValueError(f"Unsupported dependency type: {dep_type}")
-                es          = max(es_candidates) if es_candidates else 0
-                ef          = es + duration
-                dates[i, 0] = es
-                dates[i, 1] = ef
+                es           = max(es_cands) if es_cands else 0.0
+                ef           = es + duration
+                dates[i, 0]  = es
+                dates[i, 1]  = ef
                 visited.add(task_id)
     finish_time = np.max(dates[:, 1])
     visited     = set()
@@ -315,55 +315,48 @@ def critical_path_method_dep(dataset):
             task_id, preds, duration = dataset[i]
             if task_id in visited:
                 continue
-            successors = [ (succ_id, dep_type, lag, j) for j, (succ_id, succ_preds, _) in enumerate(dataset) for (pred_id, dep_type, lag) in succ_preds if pred_id == task_id ]
-            if all(succ[0] in visited or succ[0] not in ids for succ in successors):
-                lf_candidates = []
+            successors = [ (succ_id, dep_type, lag, j) for j, (succ_id, succ_preds, _) in enumerate(dataset) for (pred_id, dep_type, lag) in succ_preds if pred_id == task_id]
+            if all(succ[0] in visited for succ in successors):
+                lf_cands = []
                 for succ_id, dep_type, lag, j in successors:
+                    succ_ls = dates[j, 2]  
+                    succ_lf = dates[j, 3]
                     if dep_type == 'FS':
-                        lf_candidates.append(dates[j, 0] - lag)
+                        lf_cands.append(succ_ls - lag)
                     elif dep_type == 'SS':
-                        lf_candidates.append(dates[j, 0] - lag + duration)
+                        lf_cands.append(succ_ls - lag + duration)
                     elif dep_type == 'FF':
-                        lf_candidates.append(dates[j, 3] - lag)
+                        lf_cands.append(succ_lf - lag)
                     elif dep_type == 'SF':
-                        lf_candidates.append(dates[j, 3] - lag + duration)
+                        lf_cands.append(succ_lf - lag + duration)
                     else:
                         raise ValueError(f"Unsupported dependency type: {dep_type}")
-                lf          = min(lf_candidates) if lf_candidates else finish_time
-                ls          = lf - duration
-                dates[i, 3] = lf
-                dates[i, 2] = ls
-                dates[i, 4] = ls - dates[i, 0]
+                lf           = min(lf_cands) if lf_cands else finish_time
+                ls           = lf - duration
+                dates[i, 3]  = lf
+                dates[i, 2]  = ls
+                dates[i, 4]  = ls - dates[i, 0]
                 visited.add(task_id)
-    df               = pd.DataFrame(dates, index = ids, columns = ['ES', 'EF', 'LS', 'LF', 'Slack'])
-    df               = df.round(4)
-    predecessors_map = {task[0]: task[1] for task in dataset}
-    critical_set     = set(df[np.isclose(df['EF'], finish_time, atol = 1e-4)].index)
-
-    def trace_critical(task_id):
-        for pred_id, dep_type, lag in predecessors_map.get(task_id, []):
-            if pred_id not in df.index:
-                continue
-            pred_ef   = df.loc[pred_id, 'EF']
-            curr_es   = df.loc[task_id, 'ES']
-            pred_es   = df.loc[pred_id, 'ES']
-            dur       = df.loc[task_id, 'EF'] - df.loc[task_id, 'ES']
-            satisfied = False
-            if dep_type == 'FS' and np.isclose(curr_es,         pred_ef + lag, atol = 1e-4):
-                satisfied = True
-            elif dep_type == 'SS' and np.isclose(curr_es,       pred_es + lag, atol = 1e-4):
-                satisfied = True
-            elif dep_type == 'FF' and np.isclose(curr_es + dur, pred_ef + lag, atol = 1e-4):
-                satisfied = True
-            elif dep_type == 'SF' and np.isclose(curr_es + dur, pred_es + lag, atol = 1e-4):
-                satisfied = True
-            if satisfied and pred_id not in critical_set:
-                critical_set.add(pred_id)
-                trace_critical(pred_id)
-                
-    for end_task in list(critical_set):
-        trace_critical(end_task)
-    df.loc[list(critical_set), 'Slack'] = 0.0
+    df            = pd.DataFrame(dates, index = ids, columns = ['ES','EF','LS','LF','Slack']).round(4)
+    preds_map     = {t[0]: t[1] for t in dataset}
+    critical_set  = {df[df['EF'] == finish_time].index[0]}
+    
+    def trace_back(tid):
+        for pid, dtyp, lag in preds_map.get(tid, []):
+            if pid not in critical_set:
+                p_ef = df.loc[pid,'EF']
+                c_es = df.loc[tid,'ES']
+                dur  = df.loc[tid,'EF'] - df.loc[tid,'ES']
+                if ((dtyp == 'FS' and np.isclose(c_es,  p_ef + lag)) or
+                    (dtyp == 'SS' and np.isclose(c_es,  df.loc[pid,'ES'] + lag)) or
+                    (dtyp == 'FF' and np.isclose(c_es + dur, p_ef + lag)) or
+                    (dtyp == 'SF' and np.isclose(c_es + dur, df.loc[pid,'ES'] + lag))):
+                    critical_set.add(pid)
+                    trace_back(pid)
+                    
+    for end in list(critical_set):
+        trace_back(end)
+    df.loc[list(critical_set),'Slack'] = 0.0
     return df
 
 # Function: Pert with Dependencies and Lags
@@ -371,94 +364,94 @@ def pert_method_dep(dataset):
     ids           = [item[0] for item in dataset]
     idd           = dict(zip(ids, range(len(dataset))))
     n             = len(dataset)
-    means         = [(o + 4*m + p)/6 for (_, _, o, m, p) in dataset]
-    vars_         = [((p - o)/6)**2 for (_, _, o, m, p) in dataset]
-    dates         = np.zeros((n, 5))  # ES, EF, LS, LF, Slack
+    means         = [(o + 4*m + p) / 6 for (_, _, o, m, p) in dataset]
+    vars_         = [((p - o) / 6)**2       for (_, _, o, m, p) in dataset]
+    dates         = np.zeros((n, 5))
     dates[:, -2:] = float('+inf')
     visited       = set()
     while len(visited) < n:
         for i, (task_id, preds, *_ ) in enumerate(dataset):
             if task_id in visited:
                 continue
-            if all(pred[0] in ids and pred[0] in visited for pred in preds):
-                es_candidates = []
+            if all(pred[0] in visited for pred in preds):
+                es_cands = []
                 for pred_id, dep_type, lag in preds:
-                    j = idd[pred_id]
-                    pred_es, pred_ef = dates[j, 0], dates[j, 1]
+                    j       = idd[pred_id]
+                    pred_es = dates[j, 0]
+                    pred_ef = dates[j, 1]
                     if dep_type == 'FS':
-                        es_candidates.append(pred_ef + lag)
+                        es_cands.append(pred_ef + lag)
                     elif dep_type == 'SS':
-                        es_candidates.append(pred_es + lag)
+                        es_cands.append(pred_es + lag)
                     elif dep_type == 'FF':
-                        es_candidates.append(pred_ef + lag - means[i])
+                        es_cands.append(pred_ef + lag - means[i])
                     elif dep_type == 'SF':
-                        es_candidates.append(pred_es + lag - means[i])
+                        es_cands.append(pred_es + lag - means[i])
                     else:
                         raise ValueError(f"Unsupported dependency type: {dep_type}")
-                es          = max(es_candidates) if es_candidates else 0
-                ef          = es + means[i]
-                dates[i, 0] = es
-                dates[i, 1] = ef
+                es           = max(es_cands) if es_cands else 0.0
+                dates[i, 0]  = es
+                dates[i, 1]  = es + means[i]
                 visited.add(task_id)
-    finish_time = np.max(dates[:, 1])
+    finish_time = dates[:,1].max()
     visited     = set()
     while len(visited) < n:
         for i in reversed(range(n)):
             task_id, preds, *_ = dataset[i]
             if task_id in visited:
                 continue
-            successors = [ (succ_id, dep_type, lag, j) for j, (succ_id, succ_preds, *_ ) in enumerate(dataset) for (pred_id, dep_type, lag) in succ_preds if pred_id == task_id ]
-            if all(succ[0] in visited or succ[0] not in ids for succ in successors):
-                lf_candidates = []
+            successors = [ (succ_id, dep_type, lag, j) for j, (succ_id, succ_preds, *_) in enumerate(dataset) for (pred_id, dep_type, lag) in succ_preds if pred_id == task_id]
+            if all(succ[0] in visited for succ in successors):
+                lf_cands = []
                 for succ_id, dep_type, lag, j in successors:
-                    succ_ls, succ_lf = dates[j, 2], dates[j, 3]
+                    succ_ls = dates[j, 2]  
+                    succ_lf = dates[j, 3]  
                     if dep_type == 'FS':
-                        lf_candidates.append(succ_ls - lag)
+                        lf_cands.append(succ_ls - lag)
                     elif dep_type == 'SS':
-                        lf_candidates.append(succ_ls - lag + means[i])
+                        lf_cands.append(succ_ls - lag + means[i])
                     elif dep_type == 'FF':
-                        lf_candidates.append(succ_lf - lag)
+                        lf_cands.append(succ_lf - lag)
                     elif dep_type == 'SF':
-                        lf_candidates.append(succ_lf - lag + means[i])
+                        lf_cands.append(succ_lf - lag + means[i])
                     else:
                         raise ValueError(f"Unsupported dependency type: {dep_type}")
-                lf          = min(lf_candidates) if lf_candidates else finish_time
-                ls          = lf - means[i]
-                dates[i, 3] = lf
-                dates[i, 2] = ls
-                dates[i, 4] = ls - dates[i, 0]
+                lf           = min(lf_cands) if lf_cands else finish_time
+                ls           = lf - means[i]
+                dates[i, 3]  = lf
+                dates[i, 2]  = ls
+                dates[i, 4]  = ls - dates[i, 0]
                 visited.add(task_id)
-    df               = pd.DataFrame(dates, index = ids, columns = ['ES', 'EF', 'LS', 'LF', 'Slack'])
-    df               = df.round(4)
+    df               = pd.DataFrame(dates, index = ids, columns = ['ES','EF','LS','LF','Slack']).round(4)
     predecessors_map = {task[0]: task[1] for task in dataset}
-    critical_set     = set(df[np.isclose(df['EF'], finish_time, atol = 1e-4)].index)
-    
-    def trace_critical(task_id):
-        for pred_id, dep_type, lag in predecessors_map.get(task_id, []):
-            if pred_id not in df.index:
-                continue
-            pred_ef   = df.loc[pred_id, 'EF']
-            curr_es   = df.loc[task_id, 'ES']
-            pred_es   = df.loc[pred_id, 'ES']
-            dur       = df.loc[task_id, 'EF'] - df.loc[task_id, 'ES']
-            satisfied = False
-            if dep_type == 'FS' and np.isclose(curr_es,         pred_ef + lag, atol = 1e-4):
-                satisfied = True
-            elif dep_type == 'SS' and np.isclose(curr_es,       pred_es + lag, atol = 1e-4):
-                satisfied = True
-            elif dep_type == 'FF' and np.isclose(curr_es + dur, pred_ef + lag, atol = 1e-4):
-                satisfied = True
-            elif dep_type == 'SF' and np.isclose(curr_es + dur, pred_es + lag, atol = 1e-4):
-                satisfied = True
-            if satisfied and pred_id not in critical_set:
-                critical_set.add(pred_id)
-                trace_critical(pred_id)
-                
-    for end_task in list(critical_set):
-        trace_critical(end_task)
+    final_time       = df['EF'].max()
+    end_tasks        = df.index[np.isclose(df['EF'], final_time, atol=1e-4)].tolist()
+    if not end_tasks:
+        raise ValueError(f"Could not locate end-task for finish_time={final_time}")
+    critical_set = set(end_tasks)
+
+    def trace_back(task_id):
+        for pid, dtyp, lag in predecessors_map.get(task_id, []):
+            if pid not in critical_set:
+                p_ef = df.loc[pid, 'EF']
+                p_es = df.loc[pid, 'ES']
+                c_es = df.loc[task_id, 'ES']
+                dur  = df.loc[task_id, 'EF'] - c_es
+
+                ok = (
+                    (dtyp == 'FS' and np.isclose(c_es, p_ef + lag)) or
+                    (dtyp == 'SS' and np.isclose(c_es, p_es + lag)) or
+                    (dtyp == 'FF' and np.isclose(c_es + dur, p_ef + lag)) or
+                    (dtyp == 'SF' and np.isclose(c_es + dur, p_es + lag))
+                )
+                if ok:
+                    critical_set.add(pid)
+                    trace_back(pid)
+
+    for end in list(critical_set):
+        trace_back(end)
     df.loc[list(critical_set), 'Slack'] = 0.0
-    std_dev = np.sqrt(sum([vars_[idd[task]] for task in critical_set]))
-    return df, finish_time, round(std_dev, 4)
+    std_dev = np.sqrt(sum(vars_[idd[t]] for t in critical_set))
+    return df, final_time, round(std_dev, 4)
 
 ###############################################################################
-
