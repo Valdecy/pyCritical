@@ -77,9 +77,10 @@ def gantt_chart(dataset, dates, size_x = 15, size_y = 10, show_slack = True):
                 v_1 = yticks[k] + 0.5
               ax.hlines(y = yticks[i], xmin = h_0, xmax = h_1, linewidth = 1, color = 'k')
               ax.vlines(x = h_1,       ymin = v_0, ymax = v_1, linewidth = 1, color = 'k')
+    plt.show()
     return
 
-# Function: Gantt Chart with Dependencies and Lags
+# Function: Gantt Chart
 def gantt_chart_dep(dataset, dates, size_x = 15, size_y = 10, show_slack = True):
     finish_time = dates['EF'].max()
     tasks       = list(dates.index.values)
