@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>pyCritical — Workbench</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='28'>◆</text></svg>" />
+</head>
+<body>
+
+<!-- ======================== Backdrop / ambient ============================ -->
+<div class="ambient" aria-hidden="true">
+  <div class="ambient__grid"></div>
+  <div class="ambient__glow ambient__glow--amber"></div>
+  <div class="ambient__glow ambient__glow--cyan"></div>
+</div>
+
+<!-- ======================== App shell ===================================== -->
+<header class="topbar">
+  <div class="topbar__brand">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 40 40" width="40" height="40">
+        <defs>
+          <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#f5b042"/>
+            <stop offset="100%" stop-color="#5fbfd9"/>
+          </linearGradient>
+        </defs>
+        <path d="M20 4 L34 20 L20 36 L6 20 Z" fill="none" stroke="url(#brandGrad)" stroke-width="1.2"/>
+        <circle cx="20" cy="20" r="4" fill="url(#brandGrad)"/>
+        <circle cx="20" cy="20" r="9" fill="none" stroke="url(#brandGrad)" stroke-width="0.6" opacity="0.5"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-text__name">pyCritical</div>
+      <div class="brand-text__sub">Critical Path · PERT · Network Analysis</div>
+    </div>
+  </div>
+
+  <nav class="method-tabs" role="tablist" aria-label="Analysis method">
+    <button class="method-tab is-active" data-method="cpm" role="tab" aria-selected="true">
+      <span class="method-tab__num">01</span>
+      <span class="method-tab__label">CPM</span>
+    </button>
+    <button class="method-tab" data-method="pert" role="tab" aria-selected="false">
+      <span class="method-tab__num">02</span>
+      <span class="method-tab__label">PERT</span>
+    </button>
+    <button class="method-tab" data-method="cpm_dep" role="tab" aria-selected="false">
+      <span class="method-tab__num">03</span>
+      <span class="method-tab__label">CPM <em>+ Deps</em></span>
+    </button>
+    <button class="method-tab" data-method="pert_dep" role="tab" aria-selected="false">
+      <span class="method-tab__num">04</span>
+      <span class="method-tab__label">PERT <em>+ Deps</em></span>
+    </button>
+  </nav>
+
+</header>
+
+<!-- ======================== Status strip ================================== -->
+<section class="kpi-strip" aria-label="Project summary">
+  <div class="kpi">
+    <div class="kpi__label">Project Duration</div>
+    <div class="kpi__value" id="kpiDuration">—</div>
+    <div class="kpi__unit">time units</div>
+  </div>
+  <div class="kpi" id="kpiStdDevWrap" hidden>
+    <div class="kpi__label">σ on Critical Path</div>
+    <div class="kpi__value" id="kpiStdDev">—</div>
+    <div class="kpi__unit">std. deviation</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi__label">Tasks</div>
+    <div class="kpi__value" id="kpiTasks">—</div>
+    <div class="kpi__unit">total</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi__label">Critical Path</div>
+    <div class="kpi__value kpi__value--small" id="kpiPath">—</div>
+    <div class="kpi__unit">zero-slack chain</div>
+  </div>
+</section>
+
+<!-- ======================== Main two-pane layout ========================== -->
+<main class="workbench">
+
+  <!-- ===================== Left: input / editor ========================== -->
+  <aside class="panel panel--editor">
+    <header class="panel__head">
+      <div class="panel__head-left">
+        <h2 class="panel__title">Project Input</h2>
+        <span class="panel__hint" id="panelHint">paste dataset or edit tasks manually</span>
+      </div>
+    </header>
+
+    <div class="editor-actions" aria-label="Task actions">
+      <button class="btn btn--ghost" id="btnLoadExample" title="Load a representative example">
+        <span>Load Example</span>
+      </button>
+      <button class="btn btn--ghost" id="btnClear" title="Clear all tasks">
+        <span>Clear</span>
+      </button>
+      <button class="btn btn--primary" id="btnRun" title="Compute schedule">
+        <span>Compute ⟶</span>
+      </button>
+    </div>
+
+    <nav class="editor-mode-tabs" role="tablist" aria-label="Input mode">
+      <button class="editor-mode-tab is-active" data-editor-mode="paste" role="tab" aria-selected="true">Paste Dataset</button>
+      <button class="editor-mode-tab" data-editor-mode="manual" role="tab" aria-selected="false">Manual Editor</button>
+    </nav>
+
+    <section class="editor-pane editor-pane--paste" id="panePaste">
+      <div class="paste-box">
+        <label class="paste-box__label" for="datasetPaste">Paste Python literal or tab-separated spreadsheet</label>
+        <textarea id="datasetPaste" class="paste-box__textarea" spellcheck="false" placeholder="dataset = [&#10;    ['A', [], 3],&#10;    ['B', ['A'], 5],&#10;]&#10;&#10;or paste spreadsheet rows such as:&#10;A		3&#10;C	A	4"></textarea>
+        <div class="paste-box__actions">
+          <button class="btn btn--ghost" id="btnParsePaste" title="Parse the pasted dataset">Parse Paste</button>
+        </div>
+        <div class="paste-status" id="pasteStatus">Supports Python-style datasets with optional <span class="kbd">dataset =</span> and tab-separated spreadsheet paste from Excel or Google Sheets. The schema is auto-detected.</div>
+        <div class="paste-help">
+          <div class="paste-help__item">
+            <b>Literal</b>
+            <span>Paste the dataset exactly as used in code, including comments and either lists or tuples.</span>
+          </div>
+          <div class="paste-help__item">
+            <b>Spreadsheet</b>
+            <span>Paste rows as <span class="kbd">ID ⇥ Dependencies ⇥ Duration</span> or <span class="kbd">ID ⇥ Dependencies ⇥ O ⇥ M ⇥ P</span>. Typed dependencies may be written as <span class="kbd">A:FS:0; B:SS:2</span>.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="editor-pane editor-pane--manual" id="paneManual" hidden>
+      <div class="manual-toolbar">
+        <span class="muted">Edit the parsed dataset row by row, or build a project from scratch.</span>
+        <button class="icon-btn" id="btnAddRow" title="Add task" aria-label="Add task">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="task-table-wrap">
+        <table class="task-table" id="taskTable">
+          <thead id="taskThead"></thead>
+          <tbody id="taskTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="editor__foot">
+      <span class="muted" id="editorFootHint">Use <span class="kbd">Parse Paste</span> to convert pasted data into editable tasks. In simple modes, predecessors are comma-separated task IDs. In dependency modes, each link carries a type and lag.</span>
+    </div>
+  </aside>
+
+  <!-- ===================== Right: visualizations ========================= -->
+  <section class="panel panel--viz">
+    <nav class="viz-tabs" role="tablist" aria-label="Visualization">
+      <button class="viz-tab is-active" data-view="gantt" role="tab" aria-selected="true">Gantt</button>
+      <button class="viz-tab" data-view="network" role="tab" aria-selected="false">Network</button>
+      <button class="viz-tab" data-view="probability" role="tab" aria-selected="false" hidden>Probability</button>
+      <button class="viz-tab" data-view="table" role="tab" aria-selected="false">Table</button>
+    </nav>
+
+    <div class="viz-stage">
+      <!-- Empty state -->
+      <div class="viz-empty" id="vizEmpty">
+        <div class="viz-empty__inner">
+          <div class="viz-empty__sigil" aria-hidden="true">◆</div>
+          <h3>Awaiting computation</h3>
+          <p>Define your tasks, then press <em>Compute</em> to reveal the schedule, network, and (for PERT) probability surface.</p>
+          <button class="btn btn--ghost" id="btnLoadExample2">Load a sample project</button>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div class="viz-error" id="vizError" hidden>
+        <div class="viz-error__title">Computation failed</div>
+        <div class="viz-error__msg" id="vizErrorMsg"></div>
+      </div>
+
+      <!-- Gantt chart -->
+      <div class="viz-pane" data-view="gantt" id="paneGantt" hidden>
+        <div class="viz-toolbar">
+          <label class="check"><input type="checkbox" id="ganttShowSlack" checked /><span>Show slack</span></label>
+          <label class="check"><input type="checkbox" id="ganttShowDeps" checked /><span>Show dependencies</span></label>
+          <span class="viz-toolbar__spacer"></span>
+          <span class="legend"><span class="legend__swatch legend__swatch--crit"></span>Critical</span>
+          <span class="legend"><span class="legend__swatch legend__swatch--norm"></span>Non-critical</span>
+          <span class="legend"><span class="legend__swatch legend__swatch--slack"></span>Slack</span>
+        </div>
+        <div class="gantt-wrap" id="ganttWrap"></div>
+      </div>
+
+      <!-- Network diagram -->
+      <div class="viz-pane" data-view="network" id="paneNetwork" hidden>
+        <div class="viz-toolbar">
+          <span class="muted">Drag any node to rearrange · hover for details</span>
+          <span class="viz-toolbar__spacer"></span>
+          <button class="chip" id="netRelayout">Auto-Layout</button>
+        </div>
+        <div class="network-wrap" id="networkWrap"></div>
+      </div>
+
+      <!-- PERT Probability -->
+      <div class="viz-pane" data-view="probability" id="paneProbability" hidden>
+        <div class="prob-grid">
+          <div class="prob-controls">
+            <h3 class="prob-controls__title">Probability ⇄ Date</h3>
+            <p class="prob-controls__sub">Drag the marker, or type a value on either side. The other updates automatically.</p>
+
+            <label class="field">
+              <span class="field__label">Target date</span>
+              <input type="number" id="probDate" step="any" />
+              <span class="field__suffix">time units</span>
+            </label>
+
+            <label class="field">
+              <span class="field__label">Probability of finishing by then</span>
+              <input type="number" id="probValue" min="0" max="1" step="0.01" />
+              <span class="field__suffix">0 – 1</span>
+            </label>
+
+            <div class="prob-stat">
+              <div class="prob-stat__row"><span>Expected duration μ</span><b id="probMean">—</b></div>
+              <div class="prob-stat__row"><span>Std. deviation σ</span><b id="probSigma">—</b></div>
+              <div class="prob-stat__row"><span>z-score</span><b id="probZ">—</b></div>
+            </div>
+          </div>
+          <div class="prob-chart" id="probChartWrap"></div>
+        </div>
+      </div>
+
+      <!-- Table view -->
+      <div class="viz-pane" data-view="table" id="paneTable" hidden>
+        <div class="viz-toolbar">
+          <span class="muted">All schedule data — sorted by Earliest Start</span>
+          <span class="viz-toolbar__spacer"></span>
+          <button class="chip" id="btnDownloadCsv">Download CSV</button>
+        </div>
+        <div class="results-wrap">
+          <table class="results-table" id="resultsTable"></table>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <span>pyCritical · CPM &amp; PERT</span>
+  <span class="footer__sep">◆</span>
+  <span>local workbench</span>
+  <span class="footer__sep">◆</span>
+  <span><code>pycritical.web_stop()</code> to terminate</span>
+</footer>
+
+<div class="busy-overlay" id="busyOverlay" hidden aria-live="polite" aria-busy="true">
+  <div class="busy-overlay__card" role="status">
+    <div class="busy-overlay__spinner" aria-hidden="true"></div>
+    <div class="busy-overlay__title" id="busyTitle">Computing schedule</div>
+    <div class="busy-overlay__msg" id="busyMsg">Please wait while pyCritical analyzes the project.</div>
+  </div>
+</div>
+
+<!-- Tooltip portal -->
+<div class="tooltip" id="tooltip" hidden></div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

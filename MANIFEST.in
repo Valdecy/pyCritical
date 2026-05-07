@@ -1,0 +1,4 @@
+include README.md
+include LICENSE
+recursive-include pyCritical/src/web/templates *.html
+recursive-include pyCritical/src/web/static *.css *.js

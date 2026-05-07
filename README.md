@@ -6,6 +6,29 @@
 
 Whether you're planning a construction project, coordinating a research effort, or teaching operations research, `pyCritical` helps you model, analyze, and visualize complex project schedules.
 
+
+## **pyCritical Web App**
+
+New to Python or prefer a graphical interface? The **pyCritical Web App** lets you run your analysis in clicks, not lines of code.
+
+```python
+import pyCritical
+
+# Start the web service using:
+pyCritical.web_app()
+
+# Terminate the web service using:
+pyCritical.web_stop()
+```
+
+<p align="center">
+  <img src="https://github.com/Valdecy/Datasets/raw/master/Data%20Science/lab_crit.png" alt="Lab" width="700"/>
+</p>
+
+* [Preview -- **pyCritical Web App** -- in Google Colab](https://colab.research.google.com/drive/1L0gd9NApSGzzV14NUdEUzhMMh2uhYXB9?usp=sharing)
+
+_This Google Colab Demo is intended for quick demos only. For the best experience, run the Web UI locally or open it directly in a full browser._
+
 ---
 
 ## Features

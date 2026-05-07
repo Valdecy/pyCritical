@@ -6,18 +6,26 @@ long_description = (this_directory / 'README.md').read_text()
 
 setup(
     name='pycritical',
-    version='1.7.2',
+    version='1.8.2',
     license='GNU',
     author='Valdecy Pereira',
     author_email='valdecy.pereira@gmail.com',
     url='https://github.com/Valdecy/pyCritical',
     packages=find_packages(),
     include_package_data=True,
+    package_data={
+        'pyCritical': [
+            'src/web/templates/*.html',
+            'src/web/static/*.css',
+            'src/web/static/*.js',
+        ],
+    },
     install_requires=[
         'matplotlib',
         'numpy',
         'pandas',
-        'scipy'
+        'scipy',
+        'flask>=2.0'
     ],
     zip_safe=True,
     description='A Python Library for CPM and PERT Methods',
